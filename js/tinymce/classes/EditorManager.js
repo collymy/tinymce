@@ -142,7 +142,7 @@ define("tinymce/EditorManager", [
 
 			// Check if the URL is a document based format like: http://site/dir/file and file:///
 			// leave other formats like applewebdata://... intact
-			if (/^[^:]+:\/\/\/?[^\/]+\//.test(documentBaseURL)) {
+			if (/^[^:]+:\/\/\/?[^\/]+\//.test(documentBaseURL) || documentBaseURL.match(/^jar:file:/i) !== null) {
 				documentBaseURL = documentBaseURL.replace(/[\?#].*$/, '').replace(/[\/\\][^\/]+$/, '');
 
 				if (!/[\/\\]$/.test(documentBaseURL)) {

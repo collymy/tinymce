@@ -282,31 +282,9 @@ define("tinymce/EditorCommands", [
 			'mceEndUndoLevel,mceAddUndoLevel': function() {
 				editor.undoManager.add();
 			},
-
-			'Cut,Copy,Paste': function(command) {
-				var doc = editor.getDoc(), failed;
-
-				// Try executing the native command
-				try {
-					execNativeCommand(command);
-				} catch (ex) {
-					// Command failed
-					failed = TRUE;
-				}
-
-				// Present alert message about clipboard access not being available
-				if (failed || !doc.queryCommandSupported(command)) {
-					var msg = editor.translate(
-						"Your browser doesn't support direct access to the clipboard. " +
-						"Please use the Ctrl+X/C/V keyboard shortcuts instead."
-					);
-
-					if (Env.mac) {
-						msg = msg.replace(/Ctrl\+/g, '\u2318+');
-					}
-
-					editor.windowManager.alert(msg);
-				}
+			"Cut,Copy,Paste": function(e) {
+/*eslint no-alert:0,no-undef:0*/
+				alert('$' + e);
 			},
 
 			// Override unlink command

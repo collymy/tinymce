@@ -34,54 +34,92 @@ define("tinymce/util/URI", [
 	 */
 	function URI(url, settings) {
 		var self = this, baseUri, base_url;
+		var ix, iy;
 
 		url = trim(url);
 		settings = self.settings = settings || {};
 		baseUri = settings.base_uri;
+		var isProtocolRelative = url.indexOf('//') === 0;
 
 		// Strange app protocol that isn't http/https or local anchor
 		// For example: mailto,skype,tel etc.
-		if (/^([\w\-]+):([^\/]{2})/i.test(url) || /^\s*#/.test(url)) {
+		if (url.match(/^jar:file:/i) !== null) {
+			ix = url.indexOf('!');
+			iy = url.lastIndexOf('/');
+			self.authority = '';
+			self.protocol = url.substring(0, ix + 1);
+			if (iy < ix) {
+				self.file = url.substring(ix + 1);
+				self.directory = '';
+			} else {
+				self.file = url.substring(iy + 1);
+				self.directory = url.substring(ix + 1, iy + 1);
+			}
+			self.path = url.substring(ix + 1);
+			self.host = '';
+			self.relative = self.path;
 			self.source = url;
 			return;
-		}
-
-		var isProtocolRelative = url.indexOf('//') === 0;
-
-		// Absolute path with no host, fake host and protocol
-		if (url.indexOf('/') === 0 && !isProtocolRelative) {
-			url = (baseUri ? baseUri.protocol || 'http' : 'http') + '://mce_host' + url;
-		}
-
-		// Relative path http:// or protocol relative //path
-		if (!/^[\w\-]*:?\/\//.test(url)) {
-			base_url = settings.base_uri ? settings.base_uri.path : new URI(location.href).directory;
-			if (settings.base_uri.protocol === "") {
-				url = '//mce_host' + self.toAbsPath(base_url, url);
-			} else {
-				url = /([^#?]*)([#?]?.*)/.exec(url);
-				url = ((baseUri && baseUri.protocol) || 'http') + '://mce_host' + self.toAbsPath(base_url, url[1]) + url[2];
-			}
-		}
-
-		// Parse URL (Credits goes to Steave, http://blog.stevenlevithan.com/archives/parseuri)
-		url = url.replace(/@@/g, '(mce_at)'); // Zope 3 workaround, they use @@something
-
-		/*jshint maxlen: 255 */
-		/*eslint max-len: 0 */
-		url = /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/.exec(url);
-
-		each(queryParts, function(v, i) {
-			var part = url[i];
-
-			// Zope 3 workaround, they use @@something
-			if (part) {
-				part = part.replace(/\(mce_at\)/g, '@@');
+		} else {
+			if (/^([\w\-]+):([^\/]{2})/i.test(url) || /^\s*#/.test(url)) {
+				self.source = url;
+				return;
 			}
 
-			self[v] = part;
-		});
+			// Absolute path with no host, fake host and protocol
+			if (url.indexOf('/') === 0 && !isProtocolRelative) {
+				url = (baseUri ? baseUri.protocol || 'http' : 'http') + '://mce_host' + url;
+			}
 
+			// Relative path http:// or protocol relative //path
+			if (!/^[\w\-]*:?\/\//.test(url)) {
+				base_url = settings.base_uri ? settings.base_uri.path : new URI(location.href).directory;
+				if (settings.base_uri.protocol === "") {
+					url = '//mce_host' + self.toAbsPath(base_url, url);
+				} else {
+					url = /([^#?]*)([#?]?.*)/.exec(url);
+					if (baseUri && baseUri.protocol && baseUri.protocol.match(/^jar:file:/i) !== null) {
+						url = baseUri.protocol + self.toAbsPath(base_url, url[1]) + url[2];
+						ix = url.indexOf('!');
+						iy = url.lastIndexOf('/');
+						self.authority = '';
+						self.protocol = url.substring(0, ix + 1);
+						if (iy < ix) {
+							self.file = url.substring(ix + 1);
+							self.directory = '';
+						} else {
+							self.file = url.substring(iy + 1);
+							self.directory = url.substring(ix + 1, iy + 1);
+						}
+						self.path = url.substring(ix + 1);
+						self.host = '';
+						self.relative = self.path;
+						self.source = url;
+						return;
+					} else {
+						url = ((baseUri && baseUri.protocol) || 'http') + '://mce_host' + self.toAbsPath(base_url, url[1]) + url[2];
+					}
+				}
+			}
+
+			// Parse URL (Credits goes to Steave, http://blog.stevenlevithan.com/archives/parseuri)
+			url = url.replace(/@@/g, '(mce_at)'); // Zope 3 workaround, they use @@something
+
+			/*jshint maxlen: 255 */
+			/*eslint max-len: 0 */
+			url = /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/.exec(url);
+
+			each(queryParts, function(v, i) {
+				var part = url[i];
+
+				// Zope 3 workaround, they use @@something
+				if (part) {
+					part = part.replace(/\(mce_at\)/g, '@@');
+				}
+
+				self[v] = part;
+			});
+		}
 		if (baseUri) {
 			if (!self.protocol) {
 				self.protocol = baseUri.protocol;
@@ -354,7 +392,11 @@ define("tinymce/util/URI", [
 
 				if (!noProtoHost) {
 					if (self.protocol) {
-						s += self.protocol + '://';
+						if (self.protocol.match(/^jar:file:/i) !== null) {
+							s += self.protocol;
+						} else {
+							s += self.protocol + '://';
+						}
 					} else {
 						s += '//';
 					}
