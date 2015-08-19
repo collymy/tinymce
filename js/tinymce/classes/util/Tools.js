@@ -1,8 +1,8 @@
 /**
  * Tools.js
  *
- * Copyright, Moxiecode Systems AB
  * Released under LGPL License.
+ * Copyright (c) 1999-2015 Ephox Corp. All rights reserved
  *
  * License: http://www.tinymce.com/license
  * Contributing: http://www.tinymce.com/contributing
@@ -489,6 +489,27 @@ define("tinymce/util/Tools", [
 		return map(s.split(d || ','), trim);
 	}
 
+	function constant(value) {
+		return function() {
+			return value;
+		};
+	}
+
+	function reduce(collection, iteratee, accumulator, thisArg) {
+		var i = 0;
+
+		if (arguments.length < 3) {
+			accumulator = collection[0];
+			i = 1;
+		}
+
+		for (; i < collection.length; i++) {
+			accumulator = iteratee.call(thisArg, accumulator, collection[i], i);
+		}
+
+		return accumulator;
+	}
+
 	function _addCacheSuffix(url) {
 		var cacheSuffix = Env.cacheSuffix;
 
@@ -508,6 +529,7 @@ define("tinymce/util/Tools", [
 		each: each,
 		map: map,
 		grep: grep,
+		filter: grep,
 		inArray: inArray,
 		extend: extend,
 		create: create,
@@ -515,6 +537,8 @@ define("tinymce/util/Tools", [
 		createNS: createNS,
 		resolve: resolve,
 		explode: explode,
+		constant: constant,
+		reduce: reduce,
 		_addCacheSuffix: _addCacheSuffix
 	};
 });
